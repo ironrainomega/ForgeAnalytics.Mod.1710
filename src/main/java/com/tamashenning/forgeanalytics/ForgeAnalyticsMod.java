@@ -1,27 +1,30 @@
 package com.tamashenning.forgeanalytics;
 
+import com.tamashenning.forgeanalytics.client.ForgeAnalyticsSingleton;
 import com.tamashenning.forgeanalytics.proxies.CommonProxy;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.Mod.EventHandler;
+import cpw.mods.fml.common.Mod.Instance;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
-import cpw.mods.fml.common.event.FMLLoadCompleteEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartedEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.event.FMLServerStoppedEvent;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 
-@Mod(modid = ForgeAnalyticsMod.MODID, name = ForgeAnalyticsMod.MODNAME, version = ForgeAnalyticsMod.VERSION)
+@Mod(modid = ForgeAnalyticsMod.MODID, name = ForgeAnalyticsMod.MODNAME, version = ForgeAnalyticsMod.VERSION, guiFactory = ForgeAnalyticsMod.GUIFACTORY)
 public class ForgeAnalyticsMod {
 
 	public static final String MODID = "forgeanalytics";
 	public static final String MODNAME = "Forge Analytics";
-	public static final String VERSION = "0.0.4";
+	public static final String VERSION = "0.0.0.13";
+	public static final String GUIFACTORY = "com.tamashenning.forgeanalytics.gui.GuiFactory";
 
+    @Instance(ForgeAnalyticsMod.MODID)
+    public static ForgeAnalyticsMod instance;
+	
 	@SidedProxy(clientSide = "com.tamashenning.forgeanalytics.proxies.ClientProxy", serverSide = "com.tamashenning.forgeanalytics.proxies.ServerProxy")
 	public static CommonProxy proxy;
 
@@ -65,5 +68,7 @@ public class ForgeAnalyticsMod {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
+		
+		ForgeAnalyticsSingleton.getInstance().CancelTimer();
 	}
 }

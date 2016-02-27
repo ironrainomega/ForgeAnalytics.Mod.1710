@@ -2,14 +2,19 @@ package com.tamashenning.forgeanalytics;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicNameValuePair;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -22,28 +27,19 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.common.ForgeVersion;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
 
 public class AnalyticsClient {
 
 	public boolean UploadModel(AnalyticsModel model, boolean isClient) throws Exception {
 
-		if (isClient) {
-			// Respect snooper settings...
-			if (!Minecraft.getMinecraft().isSnooperEnabled()) {
-				return false;
-			}
-			MinecraftForge.EVENT_BUS.post(new AnalyticsEvent(cpw.mods.fml.relauncher.Side.CLIENT));
-
-		} else {
-			// Respect snooper settings...
-			if (!MinecraftServer.getServer().isSnooperEnabled()) {
-				return false;
-			}
-
-			MinecraftForge.EVENT_BUS.post(new AnalyticsEvent(cpw.mods.fml.relauncher.Side.SERVER));
+		if (!FireEvent(isClient)) {
+			return false;
 		}
 
 		model.Properties.putAll(ForgeAnalyticsConstants.CustomProperties);
+
+		// Code to send to Tamas backend...
 
 		JsonObject data = new JsonObject();
 		data.add("PartitionKey", new JsonPrimitive(model.PartitionKey));
@@ -53,37 +49,34 @@ public class AnalyticsClient {
 		JsonObject propertiesMap = new JsonObject();
 
 		for (Map.Entry<String, String> entry : model.Properties.entrySet()) {
-			propertiesMap.add(entry.getKey(), new JsonPrimitive(entry.getValue()));
+			// if the user opted out of the property, respect it...
+			if (!ForgeAnalyticsConstants.dataConfig
+					.get(Configuration.CATEGORY_GENERAL, entry.getKey() + "_OptOut", false).getBoolean()) {
+
+				propertiesMap.add(entry.getKey(), new JsonPrimitive(entry.getValue()));
+			}
 		}
 
 		data.add("Properties", propertiesMap);
 
 		String json = data.toString();
 
-		return this.UploadModel(json, isClient);
-	}
+		// Code to send to Lex' backend
 
-	private boolean UploadModel(String json, boolean isClient) throws Exception {
+		JsonObject dataForge = new JsonObject();
+		dataForge.add("cmd", new JsonPrimitive(model.PartitionKey));
 
-		System.out.println(json);
-		HttpClient httpClient = HttpClientBuilder.create().build(); // Use this
-																	// instead
+		for (Map.Entry<String, String> entry : model.Properties.entrySet()) {
+			// if the user opted out of the property, respect it...
+			if (!ForgeAnalyticsConstants.dataConfig
+					.get(Configuration.CATEGORY_GENERAL, entry.getKey() + "_OptOut", false).getBoolean()) {
 
-		try {
-			HttpPost request = new HttpPost(ForgeAnalyticsConstants.serverUrl);
-
-			StringEntity params = new StringEntity(json);
-			request.addHeader("content-type", "application/json");
-			request.setEntity(params);
-			HttpResponse response = httpClient.execute(request);
-			System.out.println(response.toString());
-			// handle response here...
-		} catch (Exception ex) {
-			// handle exception here
-			ex.printStackTrace();
+				dataForge.add(entry.getKey(), new JsonPrimitive(entry.getValue()));
+			}
 		}
 
-		return true;
+		this.UploadForge(dataForge.toString());
+		return this.UploadModel(json, isClient);
 	}
 
 	public AnalyticsModel CreateClientStartupPing() {
@@ -174,23 +167,40 @@ public class AnalyticsClient {
 		// am.Properties.put("ServerDifficulty",
 		// MinecraftServer.getServer().getDifficulty().toString());
 
-		MinecraftServer server = MinecraftServer.getServer();
-
-		if (MinecraftServer.getServer().isDedicatedServer()) {
-			// Running dedicated...
-			try {
-				am.Properties.put("ServerHostHash", this.Anonymize(server.getHostname()));
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			am.Properties.put("ConnectedUsers", Integer.toString(server.getCurrentPlayerCount()));
-		} else {
-			// Running internal...
-			am.Properties.put("ServerHostHash", "localhost");
-		}
+		/* Removing this part for now...
+		 * MinecraftServer server = MinecraftServer.getServer();
+		 * 
+		 * if (MinecraftServer.getServer().isDedicatedServer()) { // Running
+		 * dedicated... try { if (server != null) {
+		 * am.Properties.put("ServerHostHash",
+		 * this.Anonymize(server.getHostname())); } } catch
+		 * (NoSuchAlgorithmException e) { // TODO Auto-generated catch block
+		 * e.printStackTrace(); } am.Properties.put("ConnectedUsers",
+		 * Integer.toString(server.getCurrentPlayerCount())); } else { //
+		 * Running internal... am.Properties.put("ServerHostHash", "localhost");
+		 * }
+		 */
 
 		return am;
+	}
+
+	public boolean FireEvent(boolean isClient) {
+		if (isClient) {
+			// Respect snooper settings...
+			if (!Minecraft.getMinecraft().isSnooperEnabled()) {
+				return false;
+			}
+			MinecraftForge.EVENT_BUS.post(new AnalyticsEvent(cpw.mods.fml.relauncher.Side.CLIENT));
+
+		} else {
+			// Respect snooper settings...
+			if (!MinecraftServer.getServer().isSnooperEnabled()) {
+				return false;
+			}
+
+			MinecraftForge.EVENT_BUS.post(new AnalyticsEvent(cpw.mods.fml.relauncher.Side.SERVER));
+		}
+		return true;
 	}
 
 	private Map<String, String> getCommonValues() {
@@ -203,8 +213,11 @@ public class AnalyticsClient {
 		commonValues.put("JavaVersion", System.getProperty("java.version"));
 		commonValues.put("JavaMaxRAM", Long.toString(Runtime.getRuntime().maxMemory()));
 		commonValues.put("JavaAllocatedRAM", Long.toString(Runtime.getRuntime().totalMemory()));
+		// TODO: Remove once fully switched over.
 		commonValues.put("SessionID", ForgeAnalyticsSingleton.getInstance().SessionID);
 		commonValues.put("AdID", ForgeAnalyticsConstants.AdID);
+		commonValues.put("session_id", ForgeAnalyticsSingleton.getInstance().SessionUUID.toString());
+		commonValues.put("instance_id", ForgeAnalyticsConstants.InstanceUUID.toString());
 		commonValues.put("MinecraftVersion", cpw.mods.fml.common.Loader.instance().getMCVersionString());
 		commonValues.put("ForgeVersion", ForgeVersion.getVersion());
 		commonValues.put("MCPVersion", cpw.mods.fml.common.Loader.instance().getMCPVersionString());
@@ -220,6 +233,48 @@ public class AnalyticsClient {
 		 */
 
 		return commonValues;
+	}
+
+	private boolean UploadModel(String json, boolean isClient) throws Exception {
+
+		// System.out.println(json);
+		HttpClient httpClient = HttpClientBuilder.create().build();
+
+		try {
+			HttpPost request = new HttpPost(ForgeAnalyticsConstants.serverUrl);
+
+			StringEntity params = new StringEntity(json);
+			request.addHeader("content-type", "application/json");
+			request.setEntity(params);
+			HttpResponse response = httpClient.execute(request);
+			// System.out.println(response.toString());
+			// handle response here...
+		} catch (Exception ex) {
+			// handle exception here
+			ex.printStackTrace();
+		}
+
+		return true;
+	}
+
+	private void UploadForge(String json) throws Exception {
+		// System.out.println(json);
+		HttpClient httpClient = HttpClientBuilder.create().build();
+
+		try {
+			HttpPost request = new HttpPost(ForgeAnalyticsConstants.forgeServerUrl);
+
+			List<NameValuePair> nvp = new ArrayList<NameValuePair>();
+			nvp.add(new BasicNameValuePair("stat", json));
+
+			request.setEntity(new UrlEncodedFormEntity(nvp));
+			HttpResponse response = httpClient.execute(request);
+			// System.out.println(response.toString());
+			// handle response here...
+		} catch (Exception ex) {
+			// handle exception here
+			ex.printStackTrace();
+		}
 	}
 
 	public String Anonymize(String data) throws NoSuchAlgorithmException {
