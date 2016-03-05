@@ -1,5 +1,7 @@
 package com.tamashenning.forgeanalytics;
 
+import org.apache.logging.log4j.Logger;
+
 import com.tamashenning.forgeanalytics.client.ForgeAnalyticsSingleton;
 import com.tamashenning.forgeanalytics.proxies.CommonProxy;
 
@@ -28,8 +30,11 @@ public class ForgeAnalyticsMod {
 	@SidedProxy(clientSide = "com.tamashenning.forgeanalytics.proxies.ClientProxy", serverSide = "com.tamashenning.forgeanalytics.proxies.ServerProxy")
 	public static CommonProxy proxy;
 
+	public static Logger logger;
+	
 	@EventHandler
 	public void preInit(FMLPreInitializationEvent e) {
+		logger = e.getModLog();
 		proxy.preInit(e);
 	}
 

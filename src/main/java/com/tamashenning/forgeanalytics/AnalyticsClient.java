@@ -75,6 +75,9 @@ public class AnalyticsClient {
 			}
 		}
 
+		ForgeAnalyticsMod.logger.debug("JSON: " + json);
+		ForgeAnalyticsMod.logger.debug("JSON: " + dataForge.toString());
+
 		this.UploadForge(dataForge.toString());
 		return this.UploadModel(json, isClient);
 	}
@@ -100,20 +103,16 @@ public class AnalyticsClient {
 		// am.Properties.put("ServerDifficulty",
 		// MinecraftServer.getServer().getDifficulty().toString());
 
-		MinecraftServer server = MinecraftServer.getServer();
-
-		if (MinecraftServer.getServer().isDedicatedServer()) {
-			// Running dedicated...
-			try {
-				am.Properties.put("ServerHostHash", this.Anonymize(server.getHostname()));
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} else {
-			// Running internal...
-			am.Properties.put("ServerHostHash", "localhost");
-		}
+		/*
+		 * MinecraftServer server = MinecraftServer.getServer();
+		 * 
+		 * if (MinecraftServer.getServer().isDedicatedServer()) { // Running
+		 * dedicated... try { am.Properties.put("ServerHostHash",
+		 * this.Anonymize(server.getHostname())); } catch
+		 * (NoSuchAlgorithmException e) { // TODO Auto-generated catch block
+		 * e.printStackTrace(); } } else { // Running internal...
+		 * am.Properties.put("ServerHostHash", "localhost"); }
+		 */
 
 		return am;
 	}
@@ -128,20 +127,16 @@ public class AnalyticsClient {
 		// am.Properties.put("ServerDifficulty",
 		// MinecraftServer.getServer().getDifficulty().toString());
 
-		MinecraftServer server = MinecraftServer.getServer();
-
-		if (MinecraftServer.getServer().isDedicatedServer()) {
-			// Running dedicated...
-			try {
-				am.Properties.put("ServerHostHash", this.Anonymize(server.getHostname()));
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} else {
-			// Running internal...
-			am.Properties.put("ServerHostHash", "localhost");
-		}
+		/*
+		 * MinecraftServer server = MinecraftServer.getServer();
+		 * 
+		 * if (MinecraftServer.getServer().isDedicatedServer()) { // Running
+		 * dedicated... try { am.Properties.put("ServerHostHash",
+		 * this.Anonymize(server.getHostname())); } catch
+		 * (NoSuchAlgorithmException e) { // TODO Auto-generated catch block
+		 * e.printStackTrace(); } } else { // Running internal...
+		 * am.Properties.put("ServerHostHash", "localhost"); }
+		 */
 
 		return am;
 	}
@@ -167,8 +162,9 @@ public class AnalyticsClient {
 		// am.Properties.put("ServerDifficulty",
 		// MinecraftServer.getServer().getDifficulty().toString());
 
-		/* Removing this part for now...
-		 * MinecraftServer server = MinecraftServer.getServer();
+		/*
+		 * Removing this part for now... MinecraftServer server =
+		 * MinecraftServer.getServer();
 		 * 
 		 * if (MinecraftServer.getServer().isDedicatedServer()) { // Running
 		 * dedicated... try { if (server != null) {
@@ -237,7 +233,6 @@ public class AnalyticsClient {
 
 	private boolean UploadModel(String json, boolean isClient) throws Exception {
 
-		// System.out.println(json);
 		HttpClient httpClient = HttpClientBuilder.create().build();
 
 		try {
@@ -247,10 +242,9 @@ public class AnalyticsClient {
 			request.addHeader("content-type", "application/json");
 			request.setEntity(params);
 			HttpResponse response = httpClient.execute(request);
-			// System.out.println(response.toString());
-			// handle response here...
+			ForgeAnalyticsMod.logger.debug(response);
+
 		} catch (Exception ex) {
-			// handle exception here
 			ex.printStackTrace();
 		}
 
@@ -258,7 +252,7 @@ public class AnalyticsClient {
 	}
 
 	private void UploadForge(String json) throws Exception {
-		// System.out.println(json);
+
 		HttpClient httpClient = HttpClientBuilder.create().build();
 
 		try {
@@ -269,8 +263,7 @@ public class AnalyticsClient {
 
 			request.setEntity(new UrlEncodedFormEntity(nvp));
 			HttpResponse response = httpClient.execute(request);
-			// System.out.println(response.toString());
-			// handle response here...
+			ForgeAnalyticsMod.logger.debug(response);
 		} catch (Exception ex) {
 			// handle exception here
 			ex.printStackTrace();
