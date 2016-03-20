@@ -189,12 +189,17 @@ public class AnalyticsClient {
 			MinecraftForge.EVENT_BUS.post(new AnalyticsEvent(cpw.mods.fml.relauncher.Side.CLIENT));
 
 		} else {
-			// Respect snooper settings...
-			if (!MinecraftServer.getServer().isSnooperEnabled()) {
+			try {
+				// Respect snooper settings...
+				if (!MinecraftServer.getServer().isSnooperEnabled()) {
+					return false;
+				}
+
+				MinecraftForge.EVENT_BUS.post(new AnalyticsEvent(cpw.mods.fml.relauncher.Side.SERVER));
+			} catch (Exception e) {
+				// First time server init???
 				return false;
 			}
-
-			MinecraftForge.EVENT_BUS.post(new AnalyticsEvent(cpw.mods.fml.relauncher.Side.SERVER));
 		}
 		return true;
 	}
